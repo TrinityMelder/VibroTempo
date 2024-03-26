@@ -1,0 +1,29 @@
+#include <Adafruit_DRV2605.h>
+
+Adafruit_DRV2605 drv;
+
+void setup() {
+  Serial.begin(9600);
+  drv.begin();
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    int command = Serial.read();
+    if (command == '1') {
+      // Standard beat
+      drv.setWaveform(0, 1);  // Strong click
+      drv.setWaveform(1, 0);  // End sequence
+      drv.go();
+      delay(150);
+      drv.stop();
+    } else if (command == '2') {
+      // Intensified beat
+      drv.setWaveform(0, 47);  // Stronger click
+      drv.setWaveform(1, 0);   // End sequence
+      drv.go();
+      delay(150);
+      drv.stop();
+    }
+  }
+}
