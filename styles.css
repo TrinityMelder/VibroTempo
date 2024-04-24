@@ -1,0 +1,64 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f4f4f4;
+}
+
+.container {
+    width: 300px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    text-align: center;
+    color: #343a40;
+}
+
+input, select, button {
+    width: 90%;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+input[type="button"] {
+    width: 45%;
+    color: #343a40;
+    background-color: #e2e3e5;
+}
+
+input[type="text"], select {
+    background-color: #ffffff;
+    color: #343a40;
+}
+
+button {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#startButton {
+    background-color: #28a745;
+}
+
+#stopButton {
+    background-color: #dc3545;
+}
+
+.control-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.control-label {
+    display: block;
+    font-size: 14px;
+    color: #6c757d;
+    margin: 10px 0 5px;
+}
