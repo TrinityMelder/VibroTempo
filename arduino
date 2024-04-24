@@ -1,0 +1,67 @@
+#include <Adafruit_DRV2605.h>
+
+Adafruit_DRV2605 drv;
+bool vibrating = false;
+unsigned long lastVibrationTime = 0;
+int interval = 1000; // Interval in milliseconds
+int currentBeat = 1;
+int totalBeats = 4; // Total beats per cycle
+bool accents[32];   // Array to store accent status for each beat
+
+void setup() {
+  Serial.begin(9600);
+  drv.begin();
+  drv.setMode(DRV2605_MODE_INTTRIG);
+  memset(accents, 0, sizeof(accents)); // Initialize accents array to false
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    if (command.startsWith("start ")) {
+      vibrating = true;
+      parseCommand(command);
+      currentBeat = 1; // Reset beat counter
+    } else if (command == "stop") {
+      vibrating = false;
+      drv.stop();
+    }
+  }
+
+  if (vibrating && millis() - lastVibrationTime >= interval) {
+    lastVibrationTime = millis();
+    triggerVibration(currentBeat);
+    currentBeat = (currentBeat % totalBeats) + 1; // Increment and wrap around
+  }
+}
+
+void parseCommand(String command) {
+  // Example command format: "start 120,4,8,1,3"
+  int firstComma = command.indexOf(',');
+  int secondComma = command.indexOf(',', firstComma + 1);
+  int thirdComma = command.indexOf(',', secondComma + 1);
+
+  totalBeats = command.substring(firstComma + 1, secondComma).toInt();
+  interval = 60000 / command.substring(6, firstComma).toInt();
+  memset(accents, 0, sizeof(accents)); // Reset accents
+
+  String accentStr = command.substring(thirdComma + 1);
+  int idx = 0;
+  while (idx < accentStr.length()) {
+    int nextComma = accentStr.indexOf(',', idx);
+    if (nextComma == -1) nextComma = accentStr.length();
+    int beat = accentStr.substring(idx, nextComma).toInt();
+    if (beat > 0 && beat <= totalBeats) accents[beat - 1] = true;
+    idx = nextComma + 1;
+  }
+}
+
+void triggerVibration(int beat) {
+  if (accents[beat - 1]) {
+    drv.setWaveform(0, 47); // Strong click for accented beat
+  } else {
+    drv.setWaveform(0, 1); // Soft click for regular beat
+  }
+  drv.setWaveform(1, 0); // End waveform to keep duration consistent
+  drv.go();
+}
