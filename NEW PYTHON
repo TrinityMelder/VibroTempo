@@ -5,40 +5,38 @@ import nest_asyncio
 import time
 import os
 
-# Patch the existing event loop
 nest_asyncio.apply()
 
-# Setup serial connection with a higher baud rate
 ser = serial.Serial('COM8', 115200)
 
-# Directory to save the log files
 save_directory = "C:\\Users\\Trinity's Laptop\\Desktop\\Python Recordings"
 if not os.path.exists(save_directory):
     os.makedirs(save_directory)
 
-# Global variable to keep track of session numbers
 session_counter = 0
 
 async def handler(websocket, path):
     global session_counter
-    async for message in websocket:
-        print("Received message from client:", message)
-        current_time = time.perf_counter()  # High-resolution timer
-        if message.startswith("start"):
-            session_counter += 1
-            file_path = os.path.join(save_directory, f"track_{session_counter}.txt")
-            with open(file_path, 'w') as file:
-                file.write(f"Start: {current_time}\n")
-            ser.write(f"{message}\n".encode())
-            await websocket.send(f"Command sent to Arduino: {message} at {current_time}")
-        elif message == "stop":
-            file_path = os.path.join(save_directory, f"track_{session_counter}.txt")
-            with open(file_path, 'a') as file:
-                file.write(f"Stop: {current_time}\n")
-            ser.write(f"{message}\n".encode())
-            await websocket.send(f"Command sent to Arduino: {message} at {current_time}")
+    try:
+        async for message in websocket:
+            print("Received message from client:", message)
+            current_time = time.perf_counter()
+            if message.startswith("start"):
+                session_counter += 1
+                file_path = os.path.join(save_directory, f"track_{session_counter}.txt")
+                with open(file_path, 'w') as file:
+                    file.write(f"Start: {current_time}\n")
+                ser.write(f"{message}\n".encode())
+                await websocket.send(f"Command sent to Arduino: {message} at {current_time}")
+            elif message == "stop":
+                file_path = os.path.join(save_directory, f"track_{session_counter}.txt")
+                with open(file_path, 'a') as file:
+                    file.write(f"Stop: {current_time}\n")
+                ser.write(f"{message}\n".encode())
+                await websocket.send(f"Command sent to Arduino: {message} at {current_time}")
+    except websockets.exceptions.ConnectionClosed:
+        print("WebSocket connection closed by client")
 
-# Start the server
 start_server = websockets.serve(handler, "localhost", 8765)
 asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+asyncio.get_event_loop().run_fore
