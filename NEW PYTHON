@@ -3,38 +3,40 @@ import websockets
 import serial
 import nest_asyncio
 import time
+import os
 
 # Patch the existing event loop
 nest_asyncio.apply()
 
-# Setup serial connection with higher baud rate
+# Setup serial connection with a higher baud rate
 ser = serial.Serial('COM8', 115200)
 
-# Open a file for appending data
-file_path = 'metronome_log.txt'
-with open(file_path, 'a') as file:
-    file.write("Timestamp,Command\n")
+# Directory to save the log files
+save_directory = "C:\\Users\\Trinity's Laptop\\Desktop\\Python Recordings"
+if not os.path.exists(save_directory):
+    os.makedirs(save_directory)
+
+# Global variable to keep track of session numbers
+session_counter = 0
 
 async def handler(websocket, path):
+    global session_counter
     async for message in websocket:
-        if message.startswith("start") or message == "stop":
-            # Use high-resolution timer
-            timestamp = time.perf_counter()  
+        print("Received message from client:", message)
+        current_time = time.perf_counter()  # High-resolution timer
+        if message.startswith("start"):
+            session_counter += 1
+            file_path = os.path.join(save_directory, f"track_{session_counter}.txt")
+            with open(file_path, 'w') as file:
+                file.write(f"Start: {current_time}\n")
             ser.write(f"{message}\n".encode())
-            print(f"Command '{message}' sent to Arduino at system time: {timestamp}")
-
-            response = ser.readline().decode().strip()  # Assuming Arduino sends back a confirmation
-            print(f"Arduino response: {response}")
-
-            # Debug output
-            confirmation_time = time.perf_counter()
-            print(f"Confirmation received from Arduino at system time: {confirmation_time}")
-            await websocket.send(f"Command sent to Arduino: {message} at {timestamp}, confirmed at {confirmation_time}")
-
-            # Append the command and timestamp to the file
+            await websocket.send(f"Command sent to Arduino: {message} at {current_time}")
+        elif message == "stop":
+            file_path = os.path.join(save_directory, f"track_{session_counter}.txt")
             with open(file_path, 'a') as file:
-                file.write(f"{timestamp},{message}\n")
-                file.write(f"Confirmation,{confirmation_time},{response}\n")
+                file.write(f"Stop: {current_time}\n")
+            ser.write(f"{message}\n".encode())
+            await websocket.send(f"Command sent to Arduino: {message} at {current_time}")
 
 # Start the server
 start_server = websockets.serve(handler, "localhost", 8765)
