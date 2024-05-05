@@ -1,0 +1,44 @@
+<script>
+let socket;
+
+function startWebSocket() {
+    socket = new WebSocket('ws://localhost:8765');
+    socket.onmessage = function(event) {
+        console.log('Message from server: ', event.data);
+    };
+    socket.onerror = function(event) {
+        console.error("WebSocket error observed:", event);
+    };
+    socket.onclose = function(event) {
+        console.log("WebSocket connection closed:", event.reason);
+    };
+}
+
+function sendCommand(command) {
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(command);
+    } else {
+        console.log("WebSocket is not open. Attempting to reconnect...");
+        startWebSocket(); // Attempt to reconnect
+    }
+}
+
+function startVibration() {
+    const bpm = document.getElementById('bpm').value;
+    const beats = document.getElementById('beats').value;
+    const notes = document.getElementById('notes').value;
+    const accents = document.getElementById('accents').value;
+    sendCommand(`start ${bpm},${beats},${notes},${accents}`);
+}
+
+function stopVibration() {
+    sendCommand("stop");
+}
+
+function modifyValue(id, change) {
+    const input = document.getElementById(id);
+    let newValue = parseInt(input.value) + change;
+    if (newValue < 1) newValue = 1;
+    input.value = newValue;
+}
+</script>
