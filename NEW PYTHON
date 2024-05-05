@@ -1,0 +1,42 @@
+import asyncio
+import websockets
+import serial
+import nest_asyncio
+import time
+
+# Patch the existing event loop
+nest_asyncio.apply()
+
+# Setup serial connection with higher baud rate
+ser = serial.Serial('COM8', 115200)
+
+# Open a file for appending data
+file_path = 'metronome_log.txt'
+with open(file_path, 'a') as file:
+    file.write("Timestamp,Command\n")
+
+async def handler(websocket, path):
+    async for message in websocket:
+        if message.startswith("start") or message == "stop":
+            # Use high-resolution timer
+            timestamp = time.perf_counter()  
+            ser.write(f"{message}\n".encode())
+            print(f"Command '{message}' sent to Arduino at system time: {timestamp}")
+
+            response = ser.readline().decode().strip()  # Assuming Arduino sends back a confirmation
+            print(f"Arduino response: {response}")
+
+            # Debug output
+            confirmation_time = time.perf_counter()
+            print(f"Confirmation received from Arduino at system time: {confirmation_time}")
+            await websocket.send(f"Command sent to Arduino: {message} at {timestamp}, confirmed at {confirmation_time}")
+
+            # Append the command and timestamp to the file
+            with open(file_path, 'a') as file:
+                file.write(f"{timestamp},{message}\n")
+                file.write(f"Confirmation,{confirmation_time},{response}\n")
+
+# Start the server
+start_server = websockets.serve(handler, "localhost", 8765)
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
