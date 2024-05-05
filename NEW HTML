@@ -1,16 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VibroMetronome</title>
+<link rel="stylesheet" href="styles.css">
 <script>
 let socket;
 
 function startWebSocket() {
     socket = new WebSocket('ws://localhost:8765');
+    socket.onopen = function() {
+        console.log("WebSocket connection established");
+    };
     socket.onmessage = function(event) {
-        console.log('Message from server: ', event.data);
+        console.log('Message from server ', event.data);
+        updateStatus(event.data, true);
     };
-    socket.onerror = function(event) {
-        console.error("WebSocket error observed:", event);
+    socket.onclose = function() {
+        console.log("WebSocket connection closed, attempting to reconnect...");
+        setTimeout(startWebSocket, 2000);
     };
-    socket.onclose = function(event) {
-        console.log("WebSocket connection closed:", event.reason);
+    socket.onerror = function() {
+        updateStatus("Error communicating with server.", false);
     };
 }
 
@@ -18,8 +29,7 @@ function sendCommand(command) {
     if (socket.readyState === WebSocket.OPEN) {
         socket.send(command);
     } else {
-        console.log("WebSocket is not open. Attempting to reconnect...");
-        startWebSocket(); // Attempt to reconnect
+        console.log("WebSocket is not open.");
     }
 }
 
@@ -41,4 +51,43 @@ function modifyValue(id, change) {
     if (newValue < 1) newValue = 1;
     input.value = newValue;
 }
+
+function updateStatus(message, isSuccess) {
+    const statusElement = document.getElementById('statusMessage');
+    statusElement.textContent = message;
+    statusElement.style.color = isSuccess ? 'green' : 'red';
+}
+
 </script>
+</head>
+<body onload="startWebSocket();">
+    <div class="container">
+        <h1>VibroMetronome</h1>
+        <div class="control-label">BPM:</div>
+        <div class="control-group">
+            <input type="button" value="-" onclick="modifyValue('bpm', -1)">
+            <input type="text" id="bpm" value="120">
+            <input type="button" value="+" onclick="modifyValue('bpm', 1)">
+        </div>
+        <div class="control-label">Beats:</div>
+        <div class="control-group">
+            <input type="button" value="-" onclick="modifyValue('beats', -1)">
+            <input type="text" id="beats" value="4">
+            <input type="button" value="+" onclick="modifyValue('beats', 1)">
+        </div>
+        <div class="control-label">Notes:</div>
+        <div class="control-group">
+            <input type="button" value="-" onclick="modifyValue('notes', -1)">
+            <input type="text" id="notes" value="4">
+            <input type="button" value="+" onclick="modifyValue('notes', 1)">
+        </div>
+        <div class="control-label">Time Signature:</div>
+        <div id="timeSignature">4/4</div>
+        <div class="control-label">Accents:</div>
+        <input type="text" id="accents" value="1,3"><br>
+        <div id="statusMessage" style="color: red;"></div> <!-- Status Message -->
+        <button id="startButton" onclick="startVibration()">Start</button>
+        <button id="stopButton" onclick="stopVibration()">Stop</button>
+    </div>
+</body>
+</html>
