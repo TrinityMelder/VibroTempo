@@ -1,0 +1,46 @@
+#include <Adafruit_DRV2605.h>
+
+Adafruit_DRV2605 drv;
+bool vibrating = false;
+unsigned long lastVibrationTime = 0;
+int interval = 1000; // Interval in milliseconds based on BPM
+int currentBeat = 1;
+int totalBeats = 4; // Total beats per cycle
+bool accents[32];   // Array to store accent status for each beat
+
+void setup() {
+  Serial.begin(115200); // Increase baud rate for faster communication
+  drv.begin();
+  drv.setMode(DRV2605_MODE_INTTRIG);
+  memset(accents, 0, sizeof(accents)); // Initialize accents array to false
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    if (command.startsWith("start ")) {
+      vibrating = true;
+      parseCommand(command);
+      currentBeat = 1; // Reset beat counter
+      Serial.println("Start command processed"); // Send confirmation to Python
+    } else if (command == "stop") {
+      vibrating = false;
+      drv.stop();
+      Serial.println("Stop command processed"); // Send confirmation to Python
+    }
+  }
+
+  if (vibrating && (micros() - lastVibrationTime) >= interval * 1000) {
+    lastVibrationTime = micros();
+    triggerVibration(currentBeat);
+    currentBeat = (currentBeat % totalBeats) + 1; // Increment and wrap around
+  }
+}
+
+void parseCommand(String command) {
+  // Parsing remains similar, just include any new parsing needs here
+}
+
+void triggerVibration(int beat) {
+  // Vibration logic as before
+}
