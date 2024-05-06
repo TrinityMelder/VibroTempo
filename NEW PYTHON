@@ -1,42 +1,44 @@
 import asyncio
 import websockets
 import serial
-import nest_asyncio
-import time
 import os
+import nest_asyncio
+from datetime import datetime
 
+# Apply the patch right after imports
 nest_asyncio.apply()
 
-ser = serial.Serial('COM8', 115200)
-
+ser = serial.Serial('COM8', 115200, timeout=1)
 save_directory = "C:\\Users\\Trinity's Laptop\\Desktop\\Python Recordings"
 if not os.path.exists(save_directory):
     os.makedirs(save_directory)
 
-session_counter = 0
-
 async def handler(websocket, path):
-    global session_counter
+    file = None
     try:
         async for message in websocket:
             print("Received message from client:", message)
-            current_time = time.perf_counter()
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             if message.startswith("start"):
-                session_counter += 1
-                file_path = os.path.join(save_directory, f"track_{session_counter}.txt")
-                with open(file_path, 'w') as file:
-                    file.write(f"Start: {current_time}\n")
-                ser.write(f"{message}\n".encode())
-                await websocket.send(f"Command sent to Arduino: {message} at {current_time}")
-            elif message == "stop":
-                file_path = os.path.join(save_directory, f"track_{session_counter}.txt")
-                with open(file_path, 'a') as file:
-                    file.write(f"Stop: {current_time}\n")
-                ser.write(f"{message}\n".encode())
-                await websocket.send(f"Command sent to Arduino: {message} at {current_time}")
+                if file is not None:
+                    file.close()  # Ensure any previous file is closed
+                filename = f"session_{current_time.replace(':', '-')}.txt"
+                file = open(os.path.join(save_directory, filename), 'w')
+                file.write(f"Session started at {current_time}\n")
+            elif message == "stop" and file is not None:
+                file.write(f"Session stopped at {current_time}\n")
+                file.close()
+                file = None
+            elif "Vibration at beat:" in message and file is not None:
+                file.write(f"{current_time} - {message}\n")
+            ser.write((message + '\n').encode())
     except websockets.exceptions.ConnectionClosed:
         print("WebSocket connection closed by client")
+        if file:
+            file.close()
 
-start_server = websockets.serve(handler, "localhost", 8765)
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_fore
+async def main():
+    async with websockets.serve(handler, "localhost", 8765):
+        await asyncio.Future()  # Run forever
+
+asyncio.run(main())
